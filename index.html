@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simple Stock Widget Demo</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background: #f3f4f6;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .header h1 {
+        color: #111827;
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+      }
+      .demo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+      }
+      .demo-section {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .demo-section h2 {
+        margin-bottom: 10px;
+        color: #374151;
+      }
+      .demo-section p {
+        margin-bottom: 20px;
+        color: #6b7280;
+        font-size: 14px;
+      }
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+      }
+      .show-widget-btn {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+      .show-widget-btn:hover {
+        background: #059669;
+      }
+      .show-widget-btn.active {
+        background: #ef4444;
+      }
+      .copy-script-btn {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+      .copy-script-btn:hover {
+        background: #2563eb;
+      }
+      .copy-script-btn.copied {
+        background: #10b981;
+      }
+      .floating-demo-widget {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 1000;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        background: white;
+        max-width: 280px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>📈 R2StocksSnapshot Widget</h1>
+      <p style="color: #6b7280; font-size: 1.1rem">
+        Embeddable stock widgets for any website - Just copy the script!
+      </p>
+    </div>
+
+    <!-- Demo Widgets -->
+    <div class="demo-grid">
+      <!-- Apple Widget -->
+      <div class="demo-section">
+        <h2>🍎 Apple Stock</h2>
+        <p>Basic AAPL widget with sparkline</p>
+        <div id="widget-1"></div>
+        <div class="button-group">
+          <button class="show-widget-btn" onclick="showWidget('AAPL', this)">
+            👁️ Show Widget
+          </button>
+          <button class="copy-script-btn" onclick="copyScript('AAPL', this)">
+            📋 Copy Script
+          </button>
+        </div>
+      </div>
+
+      <!-- Microsoft Widget -->
+      <div class="demo-section">
+        <h2>💻 Microsoft Stock</h2>
+        <p>MSFT widget with click handler</p>
+        <div id="widget-2"></div>
+        <div class="button-group">
+          <button class="show-widget-btn" onclick="showWidget('MSFT', this)">
+            👁️ Show Widget
+          </button>
+          <button class="copy-script-btn" onclick="copyScript('MSFT', this)">
+            📋 Copy Script
+          </button>
+        </div>
+      </div>
+
+      <!-- NVIDIA Widget -->
+      <div class="demo-section">
+        <h2>🎮 NVIDIA Stock</h2>
+        <p>NVDA widget with floating functionality</p>
+        <div id="widget-3"></div>
+        <div class="button-group">
+          <button class="show-widget-btn" onclick="showWidget('NVDA', this)">
+            👁️ Show Widget
+          </button>
+          <button class="copy-script-btn" onclick="copyScript('NVDA', this)">
+            📋 Copy Script
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load the widget -->
+    <script src="./dist/stocks.umd.cjs"></script>
+    <script>
+      console.log("📦 StocksSnapshot loaded:", typeof StocksSnapshot);
+
+      let floatingWidget = null;
+      let currentFloatingSymbol = null;
+
+      // Initialize widgets when page loads
+      document.addEventListener("DOMContentLoaded", async function () {
+        try {
+          // Widget 1: Basic AAPL
+          const widget1 = await StocksSnapshot.init({
+            containerId: "widget-1",
+            symbol: "AAPL",
+            apiKey: "demo",
+            showSparkline: true,
+          });
+          console.log("✅ Widget 1 initialized");
+
+          // Widget 2: MSFT with click handler
+          const widget2 = await StocksSnapshot.init({
+            containerId: "widget-2",
+            symbol: "MSFT",
+            apiKey: "demo",
+            showSparkline: true,
+            onClick: (symbol) => {
+              alert("You clicked on " + symbol + "! 🎯");
+            },
+          });
+          console.log("✅ Widget 2 initialized");
+
+          // Widget 3: NVIDIA
+          const widget3 = await StocksSnapshot.init({
+            containerId: "widget-3",
+            symbol: "NVDA",
+            apiKey: "demo",
+            showSparkline: true,
+          });
+          console.log("✅ Widget 3 initialized");
+        } catch (error) {
+          console.error("❌ Error initializing widgets:", error);
+        }
+      });
+
+      // Show floating widget on the page
+      function showWidget(symbol, button) {
+        // Reset all show widget buttons
+        document.querySelectorAll(".show-widget-btn").forEach((btn) => {
+          btn.classList.remove("active");
+          btn.innerHTML = "👁️ Show Widget";
+        });
+
+        // If clicking the same symbol, hide the widget
+        if (currentFloatingSymbol === symbol) {
+          hideFloatingWidget();
+          return;
+        }
+
+        // Remove existing floating widget
+        hideFloatingWidget();
+
+        // Create floating widget container
+        const floatingContainer = document.createElement("div");
+        floatingContainer.id = "floating-demo-" + symbol.toLowerCase();
+        floatingContainer.className = "floating-demo-widget";
+        document.body.appendChild(floatingContainer);
+
+        // Initialize the floating widget
+        StocksSnapshot.init({
+          containerId: floatingContainer.id,
+          symbol: symbol,
+          apiKey: "demo",
+          showSparkline: true,
+          isFloating: true,
+          onClick: function (symbol) {
+            alert("Floating widget clicked: " + symbol);
+          },
+        }).then(() => {
+          floatingWidget = floatingContainer;
+          currentFloatingSymbol = symbol;
+
+          // Update button state
+          button.classList.add("active");
+          button.innerHTML = "❌ Hide Widget";
+
+          console.log("✅ Floating widget shown for " + symbol);
+        });
+      }
+
+      // Hide floating widget
+      function hideFloatingWidget() {
+        if (floatingWidget) {
+          floatingWidget.remove();
+          floatingWidget = null;
+          currentFloatingSymbol = null;
+        }
+      }
+
+      // Copy embed script
+      function copyScript(symbol, button) {
+        const originalText = button.innerHTML;
+
+        const scriptUrl =
+          window.location.origin +
+          window.location.pathname +
+          "dist/stocks.umd.cjs";
+        const embedId =
+          "stocks-widget-" + symbol.toLowerCase() + "-" + Date.now();
+
+        const embedScript =
+          '<div id="' +
+          embedId +
+          '"></div>\n' +
+          '<script async src="' +
+          scriptUrl +
+          '"><\/script>\n' +
+          "<script>\n" +
+          'document.addEventListener("DOMContentLoaded", function() {\n' +
+          '  if (typeof StocksSnapshot !== "undefined") {\n' +
+          "    StocksSnapshot.init({\n" +
+          '      containerId: "' +
+          embedId +
+          '",\n' +
+          '      symbol: "' +
+          symbol +
+          '",\n' +
+          '      apiKey: "demo",\n' +
+          "      showSparkline: true,\n" +
+          "      isFloating: true,\n" +
+          "      onClick: function(symbol) {\n" +
+          '        alert("Stock widget clicked: " + symbol);\n' +
+          "      }\n" +
+          "    });\n" +
+          "  }\n" +
+          "});\n" +
+          "<\/script>";
+
+        navigator.clipboard
+          .writeText(embedScript)
+          .then(() => {
+            button.innerHTML = "✅ Copied!";
+            button.classList.add("copied");
+
+            setTimeout(() => {
+              button.innerHTML = originalText;
+              button.classList.remove("copied");
+            }, 2000);
+
+            console.log("📋 Embed script copied for " + symbol);
+          })
+          .catch((err) => {
+            console.error("Failed to copy script:", err);
+            alert("Failed to copy script. Please try again.");
+          });
+      }
+    </script>
+  </body>
+</html>
