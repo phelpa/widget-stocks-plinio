@@ -26,12 +26,15 @@
         grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: 20px;
         margin-bottom: 40px;
+        justify-content: center;
       }
       .demo-section {
         background: white;
         padding: 20px;
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        margin: 0 auto;
       }
       .demo-section h2 {
         margin-bottom: 10px;
@@ -99,49 +102,19 @@
       </p>
     </div>
 
-    <!-- Demo Widgets -->
+    <!-- Demo Widget -->
     <div class="demo-grid">
-      <!-- Apple Widget -->
-      <div class="demo-section">
-        <h2>🍎 Apple Stock</h2>
-        <p>Basic AAPL widget with sparkline</p>
-        <div id="widget-1"></div>
-        <div class="button-group">
-          <button class="show-widget-btn" onclick="showWidget('AAPL', this)">
-            👁️ Show Widget
-          </button>
-          <button class="copy-script-btn" onclick="copyScript('AAPL', this)">
-            📋 Copy Script
-          </button>
-        </div>
-      </div>
-
       <!-- Microsoft Widget -->
       <div class="demo-section">
         <h2>💻 Microsoft Stock</h2>
-        <p>MSFT widget with click handler</p>
-        <div id="widget-2"></div>
+        <p>MSFT widget with real-time data and sparkline chart</p>
+        <div id="widget-msft"></div>
         <div class="button-group">
           <button class="show-widget-btn" onclick="showWidget('MSFT', this)">
-            👁️ Show Widget
+            Show Widget
           </button>
           <button class="copy-script-btn" onclick="copyScript('MSFT', this)">
-            📋 Copy Script
-          </button>
-        </div>
-      </div>
-
-      <!-- NVIDIA Widget -->
-      <div class="demo-section">
-        <h2>🎮 NVIDIA Stock</h2>
-        <p>NVDA widget with floating functionality</p>
-        <div id="widget-3"></div>
-        <div class="button-group">
-          <button class="show-widget-btn" onclick="showWidget('NVDA', this)">
-            👁️ Show Widget
-          </button>
-          <button class="copy-script-btn" onclick="copyScript('NVDA', this)">
-            📋 Copy Script
+            Copy Script
           </button>
         </div>
       </div>
@@ -155,40 +128,19 @@
       let floatingWidget = null;
       let currentFloatingSymbol = null;
 
-      // Initialize widgets when page loads
+      // Initialize widget when page loads
       document.addEventListener("DOMContentLoaded", async function () {
         try {
-          // Widget 1: Basic AAPL
-          const widget1 = await StocksSnapshot.init({
-            containerId: "widget-1",
-            symbol: "AAPL",
-            apiKey: "demo",
-            showSparkline: true,
-          });
-          console.log("✅ Widget 1 initialized");
-
-          // Widget 2: MSFT with click handler
-          const widget2 = await StocksSnapshot.init({
-            containerId: "widget-2",
+          // Microsoft Widget without click handler
+          const msftWidget = await StocksSnapshot.init({
+            containerId: "widget-msft",
             symbol: "MSFT",
             apiKey: "demo",
             showSparkline: true,
-            onClick: (symbol) => {
-              alert("You clicked on " + symbol + "! 🎯");
-            },
           });
-          console.log("✅ Widget 2 initialized");
-
-          // Widget 3: NVIDIA
-          const widget3 = await StocksSnapshot.init({
-            containerId: "widget-3",
-            symbol: "NVDA",
-            apiKey: "demo",
-            showSparkline: true,
-          });
-          console.log("✅ Widget 3 initialized");
+          console.log("✅ Microsoft widget initialized");
         } catch (error) {
-          console.error("❌ Error initializing widgets:", error);
+          console.error("❌ Error initializing widget:", error);
         }
       });
 
@@ -197,7 +149,7 @@
         // Reset all show widget buttons
         document.querySelectorAll(".show-widget-btn").forEach((btn) => {
           btn.classList.remove("active");
-          btn.innerHTML = "👁️ Show Widget";
+          btn.innerHTML = "Show Widget";
         });
 
         // If clicking the same symbol, hide the widget
@@ -215,23 +167,20 @@
         floatingContainer.className = "floating-demo-widget";
         document.body.appendChild(floatingContainer);
 
-        // Initialize the floating widget
+        // Initialize the floating widget without click handler
         StocksSnapshot.init({
           containerId: floatingContainer.id,
           symbol: symbol,
           apiKey: "demo",
           showSparkline: true,
           isFloating: true,
-          onClick: function (symbol) {
-            alert("Floating widget clicked: " + symbol);
-          },
         }).then(() => {
           floatingWidget = floatingContainer;
           currentFloatingSymbol = symbol;
 
           // Update button state
           button.classList.add("active");
-          button.innerHTML = "❌ Hide Widget";
+          button.innerHTML = "Hide Widget";
 
           console.log("✅ Floating widget shown for " + symbol);
         });
@@ -276,10 +225,7 @@
           '",\n' +
           '      apiKey: "demo",\n' +
           "      showSparkline: true,\n" +
-          "      isFloating: true,\n" +
-          "      onClick: function(symbol) {\n" +
-          '        alert("Stock widget clicked: " + symbol);\n' +
-          "      }\n" +
+          "      isFloating: true\n" +
           "    });\n" +
           "  }\n" +
           "});\n" +
@@ -288,7 +234,7 @@
         navigator.clipboard
           .writeText(embedScript)
           .then(() => {
-            button.innerHTML = "✅ Copied!";
+            button.innerHTML = "Copied!";
             button.classList.add("copied");
 
             setTimeout(() => {
