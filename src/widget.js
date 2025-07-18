@@ -411,10 +411,7 @@ class StockWidget {
   }
 
   async render() {
-    // Show loading
-    this.container.innerHTML =
-      '<div style="padding: 40px; text-align: center;">📡 Fetching real data...</div>';
-
+    // No loading state - start fetching data immediately
     try {
       // Get real stock data
       const stockData = await getRealStockData(this.symbol);

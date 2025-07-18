@@ -127,21 +127,60 @@
 
       let floatingWidget = null;
       let currentFloatingSymbol = null;
+      let msftWidget = null;
+      let refreshInterval = null;
+      let floatingRefreshInterval = null;
 
       // Initialize widget when page loads
       document.addEventListener("DOMContentLoaded", async function () {
         try {
           // Microsoft Widget without click handler
-          const msftWidget = await StocksSnapshot.init({
+          msftWidget = await StocksSnapshot.init({
             containerId: "widget-msft",
             symbol: "MSFT",
             apiKey: "demo",
             showSparkline: true,
           });
           console.log("✅ Microsoft widget initialized");
+
+          // Start auto-refresh every 3 seconds
+          startAutoRefresh();
         } catch (error) {
           console.error("❌ Error initializing widget:", error);
         }
+      });
+
+      // Start automatic refresh
+      function startAutoRefresh() {
+        // Clear any existing interval
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+        }
+
+        // Set up new interval for every 3 seconds
+        refreshInterval = setInterval(() => {
+          if (msftWidget) {
+            console.log("🔄 Auto-refreshing widget...");
+            msftWidget.refresh();
+          }
+        }, 15000); // 15000ms = 15 seconds
+
+        console.log("🚀 Auto-refresh started (every 15 seconds)");
+      }
+
+      // Stop automatic refresh
+      function stopAutoRefresh() {
+        if (refreshInterval) {
+          clearInterval(refreshInterval);
+          refreshInterval = null;
+          console.log("⏹️ Auto-refresh stopped");
+        }
+      }
+
+      // Clean up on page unload
+      window.addEventListener("beforeunload", function () {
+        stopAutoRefresh();
+        stopFloatingAutoRefresh();
       });
 
       // Show floating widget on the page
@@ -174,13 +213,16 @@
           apiKey: "demo",
           showSparkline: true,
           isFloating: true,
-        }).then(() => {
-          floatingWidget = floatingContainer;
+        }).then((widget) => {
+          floatingWidget = widget;
           currentFloatingSymbol = symbol;
 
           // Update button state
           button.classList.add("active");
           button.innerHTML = "Hide Widget";
+
+          // Start auto-refresh for floating widget
+          startFloatingAutoRefresh();
 
           console.log("✅ Floating widget shown for " + symbol);
         });
@@ -188,10 +230,45 @@
 
       // Hide floating widget
       function hideFloatingWidget() {
+        // Stop auto-refresh for floating widget
+        stopFloatingAutoRefresh();
+
         if (floatingWidget) {
-          floatingWidget.remove();
+          const container = document.getElementById(floatingWidget.containerId);
+          if (container) {
+            container.remove();
+          }
           floatingWidget = null;
           currentFloatingSymbol = null;
+        }
+      }
+
+      // Start automatic refresh for floating widget
+      function startFloatingAutoRefresh() {
+        // Clear any existing interval
+        if (floatingRefreshInterval) {
+          clearInterval(floatingRefreshInterval);
+        }
+
+        // Set up new interval for every 15 seconds
+        floatingRefreshInterval = setInterval(() => {
+          if (floatingWidget) {
+            console.log("🔄 Auto-refreshing floating widget...");
+            floatingWidget.refresh();
+          }
+        }, 15000); // 15000ms = 15 seconds
+
+        console.log(
+          "🚀 Floating widget auto-refresh started (every 15 seconds)"
+        );
+      }
+
+      // Stop automatic refresh for floating widget
+      function stopFloatingAutoRefresh() {
+        if (floatingRefreshInterval) {
+          clearInterval(floatingRefreshInterval);
+          floatingRefreshInterval = null;
+          console.log("⏹️ Floating widget auto-refresh stopped");
         }
       }
 
