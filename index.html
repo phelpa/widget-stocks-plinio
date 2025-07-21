@@ -92,6 +92,73 @@
         background: white;
         max-width: 280px;
       }
+      .new-widget-section {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        margin: 0 auto;
+        border: 2px dashed #d1d5db;
+        text-align: center;
+      }
+      .new-widget-section h2 {
+        margin-bottom: 10px;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .symbol-input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e5e7eb;
+        border-radius: 6px;
+        font-size: 16px;
+        text-transform: uppercase;
+        text-align: center;
+        margin-bottom: 15px;
+        transition: border-color 0.3s ease;
+        box-sizing: border-box;
+      }
+      .symbol-input:focus {
+        outline: none;
+        border-color: #10b981;
+      }
+      .add-widget-btn {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+      }
+      .add-widget-btn:hover {
+        background: #059669;
+      }
+      .add-widget-btn:disabled {
+        background: #d1d5db;
+        cursor: not-allowed;
+      }
+      .dynamic-widget {
+        position: relative;
+      }
+      .dynamic-widget .demo-section {
+        border: 2px solid #10b981;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
@@ -103,7 +170,7 @@
     </div>
 
     <!-- Demo Widget -->
-    <div class="demo-grid">
+    <div class="demo-grid" id="demo-grid">
       <!-- Microsoft Widget -->
       <div class="demo-section">
         <h2>💻 Microsoft Stock</h2>
@@ -118,6 +185,22 @@
           </button>
         </div>
       </div>
+
+      <!-- Add New Widget Section -->
+      <div class="new-widget-section">
+        <h2>➕ Add New Widget</h2>
+        <p>Enter a stock symbol to create a new widget</p>
+        <input
+          type="text"
+          class="symbol-input"
+          id="symbol-input"
+          placeholder="Enter symbol (e.g., AAPL, TSLA)"
+          maxlength="10"
+        />
+        <button class="add-widget-btn" onclick="addNewWidget()">
+          + Create Widget
+        </button>
+      </div>
     </div>
 
     <!-- Load the widget -->
@@ -130,6 +213,7 @@
       let msftWidget = null;
       let refreshInterval = null;
       let floatingRefreshInterval = null;
+      let dynamicWidgets = {}; // Store dynamic widgets
 
       // Initialize widget when page loads
       document.addEventListener("DOMContentLoaded", async function () {
@@ -145,10 +229,112 @@
 
           // Start auto-refresh every 3 seconds
           startAutoRefresh();
+
+          // Add enter key listener for symbol input
+          document
+            .getElementById("symbol-input")
+            .addEventListener("keypress", function (e) {
+              if (e.key === "Enter") {
+                addNewWidget();
+              }
+            });
         } catch (error) {
           console.error("❌ Error initializing widget:", error);
         }
       });
+
+      // Add new widget function
+      async function addNewWidget() {
+        const input = document.getElementById("symbol-input");
+        const symbol = input.value.trim().toUpperCase();
+
+        if (!symbol) {
+          alert("Please enter a stock symbol");
+          return;
+        }
+
+        if (symbol.length > 10) {
+          alert("Symbol too long. Please enter a valid stock symbol.");
+          return;
+        }
+
+        // Check if widget already exists
+        if (dynamicWidgets[symbol] || symbol === "MSFT") {
+          alert(`Widget for ${symbol} already exists!`);
+          return;
+        }
+
+        // Disable button during creation
+        const addBtn = document.querySelector(".add-widget-btn");
+        const originalText = addBtn.innerHTML;
+        addBtn.disabled = true;
+        addBtn.innerHTML = "Creating...";
+
+        try {
+          // Create new widget section
+          const widgetSection = document.createElement("div");
+          widgetSection.className = "dynamic-widget";
+          widgetSection.innerHTML = `
+            <div class="demo-section">
+              <h2>
+                📊 ${symbol} Stock
+              </h2>
+              <p>${symbol} widget with real-time data and sparkline chart</p>
+              <div id="widget-${symbol.toLowerCase()}"></div>
+              <div class="button-group">
+                <button class="show-widget-btn" onclick="showWidget('${symbol}', this)">
+                  Show Widget
+                </button>
+                <button class="copy-script-btn" onclick="copyScript('${symbol}', this)">
+                  Copy Script
+                </button>
+              </div>
+            </div>
+          `;
+
+          // Insert before the "Add New Widget" section
+          const grid = document.getElementById("demo-grid");
+          const newWidgetSection = document.querySelector(
+            ".new-widget-section"
+          );
+          grid.insertBefore(widgetSection, newWidgetSection);
+
+          // Initialize the widget
+          const widget = await StocksSnapshot.init({
+            containerId: `widget-${symbol.toLowerCase()}`,
+            symbol: symbol,
+            apiKey: "demo",
+            showSparkline: true,
+          });
+
+          // Store the widget reference
+          dynamicWidgets[symbol] = {
+            widget: widget,
+            element: widgetSection,
+          };
+
+          // Clear input
+          input.value = "";
+
+          console.log(`✅ ${symbol} widget created successfully`);
+
+          // Show success message briefly
+          addBtn.innerHTML = "✅ Created!";
+          setTimeout(() => {
+            addBtn.innerHTML = originalText;
+            addBtn.disabled = false;
+          }, 1500);
+        } catch (error) {
+          console.error(`❌ Error creating ${symbol} widget:`, error);
+          alert(
+            `Failed to create widget for ${symbol}. Please check if it's a valid stock symbol.`
+          );
+
+          // Reset button
+          addBtn.innerHTML = originalText;
+          addBtn.disabled = false;
+        }
+      }
 
       // Start automatic refresh
       function startAutoRefresh() {
@@ -157,12 +343,20 @@
           clearInterval(refreshInterval);
         }
 
-        // Set up new interval for every 3 seconds
+        // Set up new interval for every 15 seconds
         refreshInterval = setInterval(() => {
           if (msftWidget) {
-            console.log("🔄 Auto-refreshing widget...");
+            console.log("🔄 Auto-refreshing MSFT widget...");
             msftWidget.refresh();
           }
+
+          // Refresh all dynamic widgets
+          Object.keys(dynamicWidgets).forEach((symbol) => {
+            if (dynamicWidgets[symbol] && dynamicWidgets[symbol].widget) {
+              console.log(`🔄 Auto-refreshing ${symbol} widget...`);
+              dynamicWidgets[symbol].widget.refresh();
+            }
+          });
         }, 15000); // 15000ms = 15 seconds
 
         console.log("🚀 Auto-refresh started (every 15 seconds)");

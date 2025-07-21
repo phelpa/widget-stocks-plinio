@@ -1,10 +1,17 @@
 async function getRealStockData(symbol) {
+  console.log(`🔍 Starting API requests for symbol: ${symbol}`);
+
   const apis = [
     async () => {
-      const response = await fetch(
-        `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`
-      );
+      console.log(`📡 API #1 (Alpha Vantage) - Fetching data for ${symbol}`);
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`;
+      console.log(`📡 Alpha Vantage URL: ${url}`);
+
+      const response = await fetch(url);
+      console.log(`📡 Alpha Vantage response status: ${response.status}`);
+
       const data = await response.json();
+      console.log(`📡 Alpha Vantage response for ${symbol}:`, data);
 
       if (
         data["Global Quote"] &&
@@ -23,7 +30,7 @@ async function getRealStockData(symbol) {
           throw new Error("Invalid price data from Alpha Vantage");
         }
 
-        return {
+        const result = {
           symbol: symbol.toUpperCase(),
           companyName: getCompanyName(symbol.toUpperCase()),
           currentPrice: currentPrice,
@@ -32,16 +39,23 @@ async function getRealStockData(symbol) {
           lastUpdate: new Date().toISOString(),
           currency: "USD",
         };
+        console.log(`✅ Alpha Vantage success for ${symbol}:`, result);
+        return result;
       }
       throw new Error("No valid data in Alpha Vantage response");
     },
 
     // API #2: Finnhub free tier
     async () => {
-      const response = await fetch(
-        `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=demo`
-      );
+      console.log(`📡 API #2 (Finnhub) - Fetching data for ${symbol}`);
+      const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=demo`;
+      console.log(`📡 Finnhub URL: ${url}`);
+
+      const response = await fetch(url);
+      console.log(`📡 Finnhub response status: ${response.status}`);
+
       const data = await response.json();
+      console.log(`📡 Finnhub response for ${symbol}:`, data);
 
       if (data.c && data.pc && !isNaN(data.c) && !isNaN(data.pc)) {
         const currentPrice = parseFloat(data.c);
@@ -50,7 +64,7 @@ async function getRealStockData(symbol) {
         const changePercent =
           data.dp || ((currentPrice - previousClose) / previousClose) * 100;
 
-        return {
+        const result = {
           symbol: symbol.toUpperCase(),
           companyName: getCompanyName(symbol.toUpperCase()),
           currentPrice: currentPrice,
@@ -59,16 +73,25 @@ async function getRealStockData(symbol) {
           lastUpdate: new Date().toISOString(),
           currency: "USD",
         };
+        console.log(`✅ Finnhub success for ${symbol}:`, result);
+        return result;
       }
       throw new Error("Invalid or missing data from Finnhub");
     },
 
     // API #3: Using a CORS proxy for Yahoo Finance
     async () => {
+      console.log(`📡 API #3 (Yahoo Finance) - Fetching data for ${symbol}`);
       const proxyUrl = "https://api.allorigins.win/raw?url=";
       const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
-      const response = await fetch(proxyUrl + encodeURIComponent(targetUrl));
+      const fullUrl = proxyUrl + encodeURIComponent(targetUrl);
+      console.log(`📡 Yahoo Finance URL: ${fullUrl}`);
+
+      const response = await fetch(fullUrl);
+      console.log(`📡 Yahoo Finance response status: ${response.status}`);
+
       const data = await response.json();
+      console.log(`📡 Yahoo Finance response for ${symbol}:`, data);
 
       if (!data.chart || !data.chart.result || !data.chart.result[0]) {
         throw new Error("Invalid Yahoo Finance response structure");
@@ -78,9 +101,11 @@ async function getRealStockData(symbol) {
       const meta = result.meta;
 
       const currentPrice = parseFloat(
-        meta.regularMarketPrice || meta.previousClose
+        meta.regularMarketPrice || meta.chartPreviousClose
       );
-      const previousClose = parseFloat(meta.previousClose);
+      const previousClose = parseFloat(
+        meta.chartPreviousClose || meta.previousClose
+      );
 
       if (isNaN(currentPrice) || isNaN(previousClose)) {
         throw new Error("Invalid price data from Yahoo Finance");
@@ -89,7 +114,7 @@ async function getRealStockData(symbol) {
       const change = currentPrice - previousClose;
       const changePercent = (change / previousClose) * 100;
 
-      return {
+      const apiResult = {
         symbol: symbol.toUpperCase(),
         companyName: getCompanyName(symbol.toUpperCase()),
         currentPrice: currentPrice,
@@ -98,14 +123,21 @@ async function getRealStockData(symbol) {
         lastUpdate: new Date().toISOString(),
         currency: meta.currency || "USD",
       };
+      console.log(`✅ Yahoo Finance success for ${symbol}:`, apiResult);
+      return apiResult;
     },
 
     // API #4: IEX Cloud free tier (backup)
     async () => {
-      const response = await fetch(
-        `https://cloud.iexapis.com/stable/stock/${symbol}/quote?token=demo`
-      );
+      console.log(`📡 API #4 (IEX Cloud) - Fetching data for ${symbol}`);
+      const url = `https://cloud.iexapis.com/stable/stock/${symbol}/quote?token=demo`;
+      console.log(`📡 IEX Cloud URL: ${url}`);
+
+      const response = await fetch(url);
+      console.log(`📡 IEX Cloud response status: ${response.status}`);
+
       const data = await response.json();
+      console.log(`📡 IEX Cloud response for ${symbol}:`, data);
 
       if (
         data.latestPrice &&
@@ -120,7 +152,7 @@ async function getRealStockData(symbol) {
           ? data.changePercent * 100
           : (change / previousClose) * 100;
 
-        return {
+        const result = {
           symbol: symbol.toUpperCase(),
           companyName: data.companyName || getCompanyName(symbol.toUpperCase()),
           currentPrice: currentPrice,
@@ -129,6 +161,8 @@ async function getRealStockData(symbol) {
           lastUpdate: new Date().toISOString(),
           currency: "USD",
         };
+        console.log(`✅ IEX Cloud success for ${symbol}:`, result);
+        return result;
       }
       throw new Error("Invalid or missing data from IEX Cloud");
     },
@@ -136,6 +170,7 @@ async function getRealStockData(symbol) {
 
   for (let i = 0; i < apis.length; i++) {
     try {
+      console.log(`🔄 Trying API ${i + 1} for ${symbol}...`);
       const result = await apis[i]();
 
       if (
@@ -146,22 +181,32 @@ async function getRealStockData(symbol) {
         throw new Error(`API ${i + 1} returned NaN values`);
       }
 
+      console.log(
+        `🎉 Successfully fetched data for ${symbol} using API ${i + 1}`
+      );
       return result;
     } catch (error) {
-      console.warn(`API ${i + 1} failed for ${symbol}:`, error.message);
+      console.warn(`❌ API ${i + 1} failed for ${symbol}:`, error.message);
       if (i === apis.length - 1) {
-        console.warn("All APIs failed");
+        console.error(`💥 All APIs failed for ${symbol}`);
       }
     }
   }
 }
 
 async function getRealSparklineData(symbol = "AAPL") {
+  console.log(`📊 Fetching sparkline data for ${symbol}`);
   try {
     const proxyUrl = "https://api.allorigins.win/raw?url=";
     const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=7d`;
-    const response = await fetch(proxyUrl + encodeURIComponent(targetUrl));
+    const fullUrl = proxyUrl + encodeURIComponent(targetUrl);
+    console.log(`📊 Sparkline URL: ${fullUrl}`);
+
+    const response = await fetch(fullUrl);
+    console.log(`📊 Sparkline response status: ${response.status}`);
+
     const data = await response.json();
+    console.log(`📊 Sparkline response for ${symbol}:`, data);
 
     if (!data.chart || !data.chart.result || !data.chart.result[0]) {
       throw new Error("Invalid response from Yahoo Finance API");
@@ -173,9 +218,14 @@ async function getRealSparklineData(symbol = "AAPL") {
     const validCloses = closes
       .filter((price) => price !== null && !isNaN(price))
       .slice(-7);
+
+    console.log(`📊 Sparkline data for ${symbol}:`, validCloses);
     return validCloses.length > 0 && validCloses;
   } catch (error) {
-    console.warn("Failed to fetch sparkline data for", symbol);
+    console.warn(
+      `❌ Failed to fetch sparkline data for ${symbol}:`,
+      error.message
+    );
     return [];
   }
 }
@@ -250,6 +300,81 @@ function createSparkline(data, width = 100, height = 30) {
         points="${points}"
       />
     </svg>
+  `;
+}
+
+function createLoadingHTML(symbol, isFloating = false) {
+  const floatingStyles = isFloating
+    ? `
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 1000;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    max-width: 280px;
+  `
+    : "";
+
+  return `
+    <div style="
+      font-family: 'Arial', sans-serif;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      max-width: 320px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      transition: box-shadow 0.3s ease;
+      ${floatingStyles}
+    ">
+      
+      <!-- Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div>
+          <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #111827;">
+            ${symbol}
+          </h3>
+          <p style="margin: 0; font-size: 12px; color: #6b7280; margin-top: 2px;">
+            Loading...
+          </p>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 20px; font-weight: 700; color: #6b7280;">
+            <div style="
+              width: 20px; 
+              height: 20px; 
+              border: 2px solid #f3f4f6; 
+              border-top: 2px solid #10b981; 
+              border-radius: 50%; 
+              animation: spin 1s linear infinite;
+              margin-left: auto;
+            "></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Content -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div style="display: flex; align-items: center;">
+          <span style="color: #9ca3af; font-size: 14px;">
+            Fetching real-time data...
+          </span>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="border-top: 1px solid #f3f4f6; padding-top: 8px; font-size: 11px; color: #9ca3af;">
+        Loading stock data...
+      </div>
+      
+      <style>
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    </div>
   `;
 }
 
@@ -338,6 +463,7 @@ class StockWidget {
     this.showSparkline = config.showSparkline !== false;
     this.isFloating = config.isFloating || false;
     this.onClick = config.onClick;
+    this.isInitialRender = true; // Track if this is the first render
 
     if (!this.containerId) {
       throw new Error("containerId is required");
@@ -352,8 +478,22 @@ class StockWidget {
   }
 
   async render() {
+    console.log(
+      `🎨 Starting render for ${this.symbol} widget (initial: ${this.isInitialRender})`
+    );
+
+    // Show loading state only on initial render
+    if (this.isInitialRender) {
+      const loadingHTML = createLoadingHTML(this.symbol, this.isFloating);
+      this.container.innerHTML = loadingHTML;
+      console.log(`⏳ Loading state displayed for ${this.symbol}`);
+    }
+
     try {
+      console.log(`🔄 Fetching stock data for ${this.symbol}...`);
       const stockData = await getRealStockData(this.symbol);
+
+      console.log(`🔄 Fetching sparkline data for ${this.symbol}...`);
       const sparklineData = this.showSparkline
         ? await getRealSparklineData(this.symbol)
         : [];
@@ -370,18 +510,27 @@ class StockWidget {
         this.container.onclick = () => this.onClick(this.symbol);
       }
 
-      console.log("✅ Widget rendered successfully:", stockData);
+      // Mark that initial render is complete
+      this.isInitialRender = false;
+
+      console.log(
+        `✅ Widget rendered successfully for ${this.symbol}:`,
+        stockData
+      );
     } catch (error) {
-      console.error("❌ Error rendering widget:", error);
+      console.error(`❌ Error rendering widget for ${this.symbol}:`, error);
       this.container.innerHTML = `
         <div style="padding: 20px; text-align: center; color: #ef4444;">
           Error loading widget: ${error.message}
         </div>
       `;
+      // Mark that initial render is complete even on error
+      this.isInitialRender = false;
     }
   }
 
   refresh() {
+    console.log(`🔄 Refreshing ${this.symbol} widget (no loading state)`);
     this.render();
   }
 
