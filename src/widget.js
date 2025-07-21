@@ -1,17 +1,10 @@
-// Simple Stock Widget - Real data from CORS-enabled free APIs
-
-// Real stock data fetcher using multiple free APIs
-async function getRealStockData(symbol = "AAPL") {
-  // Try multiple free APIs that support CORS
+async function getRealStockData(symbol) {
   const apis = [
-    // API #1: Alpha Vantage demo endpoint (limited but works)
     async () => {
       const response = await fetch(
         `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`
       );
       const data = await response.json();
-
-      console.log("Alpha Vantage response for", symbol, ":", data);
 
       if (
         data["Global Quote"] &&
@@ -50,8 +43,6 @@ async function getRealStockData(symbol = "AAPL") {
       );
       const data = await response.json();
 
-      console.log("Finnhub response for", symbol, ":", data);
-
       if (data.c && data.pc && !isNaN(data.c) && !isNaN(data.pc)) {
         const currentPrice = parseFloat(data.c);
         const previousClose = parseFloat(data.pc);
@@ -78,8 +69,6 @@ async function getRealStockData(symbol = "AAPL") {
       const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
       const response = await fetch(proxyUrl + encodeURIComponent(targetUrl));
       const data = await response.json();
-
-      console.log("Yahoo Finance response for", symbol, ":", data);
 
       if (!data.chart || !data.chart.result || !data.chart.result[0]) {
         throw new Error("Invalid Yahoo Finance response structure");
@@ -118,8 +107,6 @@ async function getRealStockData(symbol = "AAPL") {
       );
       const data = await response.json();
 
-      console.log("IEX Cloud response for", symbol, ":", data);
-
       if (
         data.latestPrice &&
         data.previousClose &&
@@ -147,13 +134,10 @@ async function getRealStockData(symbol = "AAPL") {
     },
   ];
 
-  // Try each API in sequence
   for (let i = 0; i < apis.length; i++) {
     try {
-      console.log(`Trying API ${i + 1} for ${symbol}...`);
       const result = await apis[i]();
 
-      // Final validation before returning
       if (
         isNaN(result.currentPrice) ||
         isNaN(result.change) ||
@@ -162,23 +146,18 @@ async function getRealStockData(symbol = "AAPL") {
         throw new Error(`API ${i + 1} returned NaN values`);
       }
 
-      console.log(`✅ Successfully fetched data from API ${i + 1}:`, result);
       return result;
     } catch (error) {
       console.warn(`API ${i + 1} failed for ${symbol}:`, error.message);
       if (i === apis.length - 1) {
-        // All APIs failed, use fallback
-        console.warn("All APIs failed, using fallback data");
-        return getFallbackStockData(symbol);
+        console.warn("All APIs failed");
       }
     }
   }
 }
 
-// Real sparkline data fetcher
 async function getRealSparklineData(symbol = "AAPL") {
   try {
-    // Try CORS proxy for Yahoo Finance sparkline data
     const proxyUrl = "https://api.allorigins.win/raw?url=";
     const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=7d`;
     const response = await fetch(proxyUrl + encodeURIComponent(targetUrl));
@@ -191,23 +170,16 @@ async function getRealSparklineData(symbol = "AAPL") {
     const result = data.chart.result[0];
     const closes = result.indicators.quote[0].close;
 
-    // Filter out null values and get last 7 data points
     const validCloses = closes
       .filter((price) => price !== null && !isNaN(price))
       .slice(-7);
-    return validCloses.length > 0 ? validCloses : getFallbackSparklineData();
+    return validCloses.length > 0 && validCloses;
   } catch (error) {
-    console.warn(
-      "Failed to fetch sparkline data for",
-      symbol,
-      "- using fallback data:",
-      error
-    );
-    return getFallbackSparklineData();
+    console.warn("Failed to fetch sparkline data for", symbol);
+    return [];
   }
 }
 
-// Company name mapping (since free APIs don't always include company names)
 function getCompanyName(symbol) {
   const companies = {
     AAPL: "Apple Inc.",
@@ -233,34 +205,6 @@ function getCompanyName(symbol) {
   return companies[symbol] || `${symbol} Corporation`;
 }
 
-// Fallback data (similar to demo data but marked as fallback)
-function getFallbackStockData(symbol = "AAPL") {
-  console.log(`🔄 Using fallback data for ${symbol}`);
-  const basePrice = 150 + Math.random() * 100;
-  const change = (Math.random() - 0.5) * 10;
-  const changePercent = (change / basePrice) * 100;
-
-  return {
-    symbol: symbol.toUpperCase(),
-    companyName: getCompanyName(symbol.toUpperCase()) + " (Demo)",
-    currentPrice: basePrice,
-    change: change,
-    changePercent: changePercent,
-    lastUpdate: new Date().toISOString(),
-    currency: "USD",
-  };
-}
-
-// Fallback sparkline data
-function getFallbackSparklineData() {
-  const data = [];
-  const basePrice = 150;
-  for (let i = 6; i >= 0; i--) {
-    data.push(basePrice + (Math.random() - 0.5) * 20);
-  }
-  return data;
-}
-
 // Format price with proper validation
 function formatPrice(price, currency = "USD") {
   if (isNaN(price) || price === null || price === undefined) {
@@ -273,7 +217,6 @@ function formatPrice(price, currency = "USD") {
   }).format(price);
 }
 
-// Format percentage with proper validation
 function formatPercentage(percent) {
   if (isNaN(percent) || percent === null || percent === undefined) {
     return "0.00%";
@@ -283,7 +226,6 @@ function formatPercentage(percent) {
   return `${sign}${percent.toFixed(2)}%`;
 }
 
-// Create sparkline SVG
 function createSparkline(data, width = 100, height = 30) {
   if (!data || data.length === 0) return "";
 
@@ -311,7 +253,6 @@ function createSparkline(data, width = 100, height = 30) {
   `;
 }
 
-// Create widget HTML
 function createWidgetHTML(stockData, sparklineData = [], isFloating = false) {
   const changeColor = stockData.change >= 0 ? "#10b981" : "#ef4444";
   const changeIcon = stockData.change >= 0 ? "↗" : "↘";
@@ -411,15 +352,12 @@ class StockWidget {
   }
 
   async render() {
-    // No loading state - start fetching data immediately
     try {
-      // Get real stock data
       const stockData = await getRealStockData(this.symbol);
       const sparklineData = this.showSparkline
         ? await getRealSparklineData(this.symbol)
         : [];
 
-      // Create widget HTML
       const widgetHTML = createWidgetHTML(
         stockData,
         sparklineData,
@@ -427,7 +365,6 @@ class StockWidget {
       );
       this.container.innerHTML = widgetHTML;
 
-      // Add click handler
       if (this.onClick) {
         this.container.style.cursor = "pointer";
         this.container.onclick = () => this.onClick(this.symbol);
