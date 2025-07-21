@@ -1,7 +1,8 @@
 async function getRealStockData(symbol) {
-  console.log(`🔍 Starting API requests for symbol: ${symbol}`);
+  console.log(`🔍 Starting parallel API requests for symbol: ${symbol}`);
 
   const apis = [
+    // API #1: Alpha Vantage
     async () => {
       console.log(`📡 API #1 (Alpha Vantage) - Fetching data for ${symbol}`);
       const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`;
@@ -32,12 +33,13 @@ async function getRealStockData(symbol) {
 
         const result = {
           symbol: symbol.toUpperCase(),
-          companyName: getCompanyName(symbol.toUpperCase()),
+          companyName: symbol.toUpperCase(), // Use symbol since Alpha Vantage doesn't provide company name
           currentPrice: currentPrice,
           change: change,
           changePercent: changePercent,
           lastUpdate: new Date().toISOString(),
           currency: "USD",
+          source: "Alpha Vantage",
         };
         console.log(`✅ Alpha Vantage success for ${symbol}:`, result);
         return result;
@@ -45,43 +47,9 @@ async function getRealStockData(symbol) {
       throw new Error("No valid data in Alpha Vantage response");
     },
 
-    // API #2: Finnhub free tier
+    // API #2: Using a CORS proxy for Yahoo Finance
     async () => {
-      console.log(`📡 API #2 (Finnhub) - Fetching data for ${symbol}`);
-      const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=demo`;
-      console.log(`📡 Finnhub URL: ${url}`);
-
-      const response = await fetch(url);
-      console.log(`📡 Finnhub response status: ${response.status}`);
-
-      const data = await response.json();
-      console.log(`📡 Finnhub response for ${symbol}:`, data);
-
-      if (data.c && data.pc && !isNaN(data.c) && !isNaN(data.pc)) {
-        const currentPrice = parseFloat(data.c);
-        const previousClose = parseFloat(data.pc);
-        const change = data.d || currentPrice - previousClose;
-        const changePercent =
-          data.dp || ((currentPrice - previousClose) / previousClose) * 100;
-
-        const result = {
-          symbol: symbol.toUpperCase(),
-          companyName: getCompanyName(symbol.toUpperCase()),
-          currentPrice: currentPrice,
-          change: change,
-          changePercent: changePercent,
-          lastUpdate: new Date().toISOString(),
-          currency: "USD",
-        };
-        console.log(`✅ Finnhub success for ${symbol}:`, result);
-        return result;
-      }
-      throw new Error("Invalid or missing data from Finnhub");
-    },
-
-    // API #3: Using a CORS proxy for Yahoo Finance
-    async () => {
-      console.log(`📡 API #3 (Yahoo Finance) - Fetching data for ${symbol}`);
+      console.log(`📡 API #2 (Yahoo Finance) - Fetching data for ${symbol}`);
       const proxyUrl = "https://api.allorigins.win/raw?url=";
       const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1d`;
       const fullUrl = proxyUrl + encodeURIComponent(targetUrl);
@@ -116,80 +84,95 @@ async function getRealStockData(symbol) {
 
       const apiResult = {
         symbol: symbol.toUpperCase(),
-        companyName: getCompanyName(symbol.toUpperCase()),
+        companyName: meta.longName || meta.shortName || symbol.toUpperCase(), // Use company name from Yahoo if available
         currentPrice: currentPrice,
         change: change,
         changePercent: changePercent,
         lastUpdate: new Date().toISOString(),
         currency: meta.currency || "USD",
+        source: "Yahoo Finance",
       };
       console.log(`✅ Yahoo Finance success for ${symbol}:`, apiResult);
       return apiResult;
     },
-
-    // API #4: IEX Cloud free tier (backup)
-    async () => {
-      console.log(`📡 API #4 (IEX Cloud) - Fetching data for ${symbol}`);
-      const url = `https://cloud.iexapis.com/stable/stock/${symbol}/quote?token=demo`;
-      console.log(`📡 IEX Cloud URL: ${url}`);
-
-      const response = await fetch(url);
-      console.log(`📡 IEX Cloud response status: ${response.status}`);
-
-      const data = await response.json();
-      console.log(`📡 IEX Cloud response for ${symbol}:`, data);
-
-      if (
-        data.latestPrice &&
-        data.previousClose &&
-        !isNaN(data.latestPrice) &&
-        !isNaN(data.previousClose)
-      ) {
-        const currentPrice = parseFloat(data.latestPrice);
-        const previousClose = parseFloat(data.previousClose);
-        const change = data.change || currentPrice - previousClose;
-        const changePercent = data.changePercent
-          ? data.changePercent * 100
-          : (change / previousClose) * 100;
-
-        const result = {
-          symbol: symbol.toUpperCase(),
-          companyName: data.companyName || getCompanyName(symbol.toUpperCase()),
-          currentPrice: currentPrice,
-          change: change,
-          changePercent: changePercent,
-          lastUpdate: new Date().toISOString(),
-          currency: "USD",
-        };
-        console.log(`✅ IEX Cloud success for ${symbol}:`, result);
-        return result;
-      }
-      throw new Error("Invalid or missing data from IEX Cloud");
-    },
   ];
 
-  for (let i = 0; i < apis.length; i++) {
+  // Create promises that resolve with either success or null on failure
+  const apiPromises = apis.map(async (apiFunc, index) => {
     try {
-      console.log(`🔄 Trying API ${i + 1} for ${symbol}...`);
-      const result = await apis[i]();
+      const data = await apiFunc();
 
+      // Validate the result
       if (
-        isNaN(result.currentPrice) ||
-        isNaN(result.change) ||
-        isNaN(result.changePercent)
+        isNaN(data.currentPrice) ||
+        isNaN(data.change) ||
+        isNaN(data.changePercent)
       ) {
-        throw new Error(`API ${i + 1} returned NaN values`);
+        console.warn(`❌ API ${index + 1} returned invalid data for ${symbol}`);
+        return null;
       }
 
       console.log(
-        `🎉 Successfully fetched data for ${symbol} using API ${i + 1}`
+        `🎉 API ${index + 1} (${data.source}) succeeded for ${symbol}`
       );
-      return result;
+      return data;
     } catch (error) {
-      console.warn(`❌ API ${i + 1} failed for ${symbol}:`, error.message);
-      if (i === apis.length - 1) {
-        console.error(`💥 All APIs failed for ${symbol}`);
+      console.warn(`❌ API ${index + 1} failed for ${symbol}:`, error.message);
+      return null;
+    }
+  });
+
+  console.log(`🏁 Racing ${apis.length} APIs in parallel for ${symbol}...`);
+
+  // Use Promise.race to return as soon as ANY API succeeds
+  try {
+    // Race all promises - first non-null result wins
+    const raceResult = await Promise.race(
+      apiPromises.map(async (promise, index) => {
+        const result = await promise;
+        if (result !== null) {
+          console.log(`🎉 Winner: ${result.source} for ${symbol}`);
+          return result;
+        }
+        // If this API failed, wait a bit and throw to continue the race
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        throw new Error(`API ${index + 1} failed`);
+      })
+    );
+
+    return raceResult;
+  } catch (raceError) {
+    // If the race fails, fall back to waiting for all results
+    console.log(
+      `🔄 All APIs racing failed, checking all results for ${symbol}...`
+    );
+
+    try {
+      const results = await Promise.allSettled(apiPromises);
+
+      // Find any successful result
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value !== null) {
+          console.log(
+            `🎉 Fallback winner: ${result.value.source} for ${symbol}`
+          );
+          return result.value;
+        }
       }
+
+      // If we get here, all APIs failed
+      console.error(`💥 All APIs failed for ${symbol}`);
+      throw new Error(
+        `Unable to fetch data for ${symbol}. Please try again later.`
+      );
+    } catch (error) {
+      console.error(
+        `💥 Error during API fallback for ${symbol}:`,
+        error.message
+      );
+      throw new Error(
+        `Unable to fetch data for ${symbol}. Please try again later.`
+      );
     }
   }
 }
@@ -228,31 +211,6 @@ async function getRealSparklineData(symbol = "AAPL") {
     );
     return [];
   }
-}
-
-function getCompanyName(symbol) {
-  const companies = {
-    AAPL: "Apple Inc.",
-    MSFT: "Microsoft Corporation",
-    GOOGL: "Alphabet Inc.",
-    GOOG: "Alphabet Inc.",
-    TSLA: "Tesla, Inc.",
-    NVDA: "NVIDIA Corporation",
-    AMZN: "Amazon.com Inc.",
-    META: "Meta Platforms Inc.",
-    NFLX: "Netflix Inc.",
-    AMD: "Advanced Micro Devices",
-    INTC: "Intel Corporation",
-    CRM: "Salesforce Inc.",
-    ORCL: "Oracle Corporation",
-    IBM: "International Business Machines",
-    CSCO: "Cisco Systems Inc.",
-    SPY: "SPDR S&P 500 ETF",
-    QQQ: "Invesco QQQ Trust",
-    VTI: "Vanguard Total Stock Market ETF",
-  };
-
-  return companies[symbol] || `${symbol} Corporation`;
 }
 
 // Format price with proper validation
@@ -519,11 +477,32 @@ class StockWidget {
       );
     } catch (error) {
       console.error(`❌ Error rendering widget for ${this.symbol}:`, error);
+
+      // Show a user-friendly error state instead of technical error
       this.container.innerHTML = `
-        <div style="padding: 20px; text-align: center; color: #ef4444;">
-          Error loading widget: ${error.message}
+        <div style="
+          font-family: 'Arial', sans-serif;
+          background: white;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 20px;
+          max-width: 320px;
+          text-align: center;
+          color: #6b7280;
+        ">
+          <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
+          <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #374151;">
+            ${this.symbol}
+          </h3>
+          <p style="margin: 0; font-size: 14px;">
+            Market data temporarily unavailable
+          </p>
+          <p style="margin: 8px 0 0 0; font-size: 12px;">
+            Please try again in a moment
+          </p>
         </div>
       `;
+
       // Mark that initial render is complete even on error
       this.isInitialRender = false;
     }
