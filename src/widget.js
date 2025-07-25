@@ -5,7 +5,7 @@ async function getRealStockData(symbol) {
     // API #1: Alpha Vantage
     async () => {
       console.log(`📡 API #1 (Alpha Vantage) - Fetching data for ${symbol}`);
-      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`;
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=1G6V4CJMMZ4RXJ33`;
       console.log(`📡 Alpha Vantage URL: ${url}`);
 
       const response = await fetch(url);
@@ -177,42 +177,6 @@ async function getRealStockData(symbol) {
   }
 }
 
-async function getRealSparklineData(symbol = "AAPL") {
-  console.log(`📊 Fetching sparkline data for ${symbol}`);
-  try {
-    const proxyUrl = "https://api.allorigins.win/raw?url=";
-    const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=7d`;
-    const fullUrl = proxyUrl + encodeURIComponent(targetUrl);
-    console.log(`📊 Sparkline URL: ${fullUrl}`);
-
-    const response = await fetch(fullUrl);
-    console.log(`📊 Sparkline response status: ${response.status}`);
-
-    const data = await response.json();
-    console.log(`📊 Sparkline response for ${symbol}:`, data);
-
-    if (!data.chart || !data.chart.result || !data.chart.result[0]) {
-      throw new Error("Invalid response from Yahoo Finance API");
-    }
-
-    const result = data.chart.result[0];
-    const closes = result.indicators.quote[0].close;
-
-    const validCloses = closes
-      .filter((price) => price !== null && !isNaN(price))
-      .slice(-7);
-
-    console.log(`📊 Sparkline data for ${symbol}:`, validCloses);
-    return validCloses.length > 0 && validCloses;
-  } catch (error) {
-    console.warn(
-      `❌ Failed to fetch sparkline data for ${symbol}:`,
-      error.message
-    );
-    return [];
-  }
-}
-
 // Format price with proper validation
 function formatPrice(price, currency = "USD") {
   if (isNaN(price) || price === null || price === undefined) {
@@ -232,33 +196,6 @@ function formatPercentage(percent) {
 
   const sign = percent >= 0 ? "+" : "";
   return `${sign}${percent.toFixed(2)}%`;
-}
-
-function createSparkline(data, width = 100, height = 30) {
-  if (!data || data.length === 0) return "";
-
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const range = max - min || 1;
-
-  const points = data
-    .map((value, index) => {
-      const x = (index / (data.length - 1)) * width;
-      const y = height - ((value - min) / range) * height;
-      return `${x},${y}`;
-    })
-    .join(" ");
-
-  return `
-    <svg width="${width}" height="${height}" style="margin-left: 10px;">
-      <polyline
-        fill="none"
-        stroke="#10b981"
-        stroke-width="2"
-        points="${points}"
-      />
-    </svg>
-  `;
 }
 
 function createLoadingHTML(symbol, isFloating = false) {
@@ -336,11 +273,9 @@ function createLoadingHTML(symbol, isFloating = false) {
   `;
 }
 
-function createWidgetHTML(stockData, sparklineData = [], isFloating = false) {
+function createWidgetHTML(stockData, isFloating = false) {
   const changeColor = stockData.change >= 0 ? "#10b981" : "#ef4444";
   const changeIcon = stockData.change >= 0 ? "↗" : "↘";
-  const sparkline =
-    sparklineData.length > 0 ? createSparkline(sparklineData) : "";
 
   const floatingStyles = isFloating
     ? `
@@ -401,7 +336,6 @@ function createWidgetHTML(stockData, sparklineData = [], isFloating = false) {
             (${formatPercentage(stockData.changePercent)})
           </span>
         </div>
-        ${sparkline}
       </div>
 
       <!-- Footer -->
@@ -418,7 +352,6 @@ class StockWidget {
     this.containerId = config.containerId;
     this.symbol = config.symbol || "AAPL";
     this.apiKey = config.apiKey;
-    this.showSparkline = config.showSparkline !== false;
     this.isFloating = config.isFloating || false;
     this.onClick = config.onClick;
     this.isInitialRender = true; // Track if this is the first render
@@ -454,16 +387,7 @@ class StockWidget {
       console.log(`🔄 Fetching stock data for ${this.symbol}...`);
       const stockData = await getRealStockData(this.symbol);
 
-      console.log(`🔄 Fetching sparkline data for ${this.symbol}...`);
-      const sparklineData = this.showSparkline
-        ? await getRealSparklineData(this.symbol)
-        : [];
-
-      const widgetHTML = createWidgetHTML(
-        stockData,
-        sparklineData,
-        this.isFloating
-      );
+      const widgetHTML = createWidgetHTML(stockData, this.isFloating);
       this.container.innerHTML = widgetHTML;
 
       if (this.onClick) {

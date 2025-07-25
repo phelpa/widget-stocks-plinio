@@ -171,7 +171,7 @@
       <!-- Microsoft Widget -->
       <div class="demo-section">
         <h2>💻 Microsoft Stock</h2>
-        <p>MSFT widget with real-time data and sparkline chart</p>
+        <p>MSFT widget with real-time stock data</p>
         <div id="widget-msft"></div>
         <div class="button-group">
           <button class="show-widget-btn" onclick="showWidget('MSFT', this)">
@@ -220,7 +220,6 @@
             containerId: "widget-msft",
             symbol: "MSFT",
             apiKey: "demo",
-            showSparkline: true,
           });
           console.log("✅ Microsoft widget initialized");
 
@@ -276,7 +275,7 @@
               <h2>
                 📊 ${symbol} Stock
               </h2>
-              <p>${symbol} widget with real-time data and sparkline chart</p>
+              <p>${symbol} widget with real-time data</p>
               <div id="widget-${symbol.toLowerCase()}"></div>
               <div class="button-group">
                 <button class="show-widget-btn" onclick="showWidget('${symbol}', this)">
@@ -301,7 +300,6 @@
             containerId: `widget-${symbol.toLowerCase()}`,
             symbol: symbol,
             apiKey: "demo",
-            showSparkline: true,
           });
 
           // Store the widget reference
@@ -402,7 +400,6 @@
           containerId: floatingContainer.id,
           symbol: symbol,
           apiKey: "demo",
-          showSparkline: true,
           isFloating: true,
         }).then((widget) => {
           floatingWidget = widget;
@@ -492,7 +489,6 @@
           symbol +
           '",\n' +
           '      apiKey: "demo",\n' +
-          "      showSparkline: true,\n" +
           "      isFloating: true\n" +
           "    });\n" +
           "  }\n" +

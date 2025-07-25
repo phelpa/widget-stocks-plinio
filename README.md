@@ -1,17 +1,11 @@
-# 📈 StocksSnapshot Widget
+# 📈 R2StocksSnapshot Widget
 
-A lightweight, embeddable stock widget that displays real-time stock data with sparkline charts. Built with vanilla JavaScript and designed to work on any website.
+A lightweight, embeddable stock widget that displays real-time stock data. Built with vanilla JavaScript and designed to work on any website.
 
-## 🚀 Features
+## ✨ Features
 
-- **Real-time Stock Data**: Fetches live stock prices and changes
-- **Sparkline Charts**: Mini charts showing 7-day price trends
-- **Multiple API Sources**: Failover between Yahoo Finance and Alpha Vantage
-- **Universal Compatibility**: Works on any website
-- **Responsive Design**: Mobile and desktop friendly
-- **Loading States**: Smooth loading animations
-- **Error Handling**: Graceful fallbacks when APIs fail
-- **No Dependencies**: Pure vanilla JavaScript
+- **Real-time Data**: Live stock prices from multiple API sources
+- **Responsive Design**: Works on desktop and mobile devices
 
 ## 📊 Demo
 

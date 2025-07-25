@@ -108,19 +108,10 @@ This project includes comprehensive unit tests using Jest and Testing Library to
 - Invalid input graceful handling
 - Decimal precision
 
-**createSparkline:**
-
-- SVG sparkline generation
-- Custom dimensions
-- Invalid data handling
-- Single data point handling
-- Identical values handling
-
 **createWidgetHTML:**
 
 - Complete widget HTML generation
 - Negative change styling
-- Sparkline inclusion
 - Floating styles
 - Last update formatting
 
@@ -144,16 +135,6 @@ This project includes comprehensive unit tests using Jest and Testing Library to
 - Network error handling
 - Symbol case handling
 - Percentage string parsing
-
-**getRealSparklineData:**
-
-- Sparkline data retrieval
-- Null value filtering
-- Data point limiting (last 7)
-- API failure handling
-- Invalid response structure
-- Default symbol usage
-- Empty data handling
 
 **Error Scenarios:**
 
