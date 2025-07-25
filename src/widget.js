@@ -5,7 +5,7 @@ async function getRealStockData(symbol) {
     // API #1: Alpha Vantage
     async () => {
       console.log(`📡 API #1 (Alpha Vantage) - Fetching data for ${symbol}`);
-      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=1G6V4CJMMZ4RXJ33`;
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=demo`;
       console.log(`📡 Alpha Vantage URL: ${url}`);
 
       const response = await fetch(url);
