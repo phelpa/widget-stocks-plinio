@@ -445,6 +445,9 @@ class StockWidget {
       const loadingHTML = createLoadingHTML(this.symbol, this.isFloating);
       this.container.innerHTML = loadingHTML;
       console.log(`⏳ Loading state displayed for ${this.symbol}`);
+
+      // Mark that initial render is complete immediately after showing loading
+      this.isInitialRender = false;
     }
 
     try {
@@ -467,9 +470,6 @@ class StockWidget {
         this.container.style.cursor = "pointer";
         this.container.onclick = () => this.onClick(this.symbol);
       }
-
-      // Mark that initial render is complete
-      this.isInitialRender = false;
 
       console.log(
         `✅ Widget rendered successfully for ${this.symbol}:`,
@@ -502,9 +502,6 @@ class StockWidget {
           </p>
         </div>
       `;
-
-      // Mark that initial render is complete even on error
-      this.isInitialRender = false;
     }
   }
 
